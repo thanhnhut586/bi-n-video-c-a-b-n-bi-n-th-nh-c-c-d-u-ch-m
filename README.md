@@ -1,0 +1,1 @@
+Nếu bạn đã cài đặt git sẵn rồi thì bạn mở phần mềm chạy lệnh của Windows Sau đó bạn gõ cái này: https://github.com/thanhnhut586/bi-n-video-c-a-b-n-bi-n-th-nh-c-c-d-u-ch-m.git, nó hoàn toàn miễn phí và mã nguồn mở (ít nhất là vậy)
