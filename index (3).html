@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hiệu ứng chấm chấm từ Video</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Google Sans', 'Roboto', sans-serif;
+      }
+      .title-black {
+        color: black;
+      }
+      .hidden {
+        display: none;
+      }
+      .visible {
+        display: flex;
+      }
+      #videoDisplayArea {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        max-width: 100%;
+      }
+      #myVideo, #myCanvas {
+        max-width: 100%;
+        height: auto;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin-bottom: 1rem;
+      }
+      .loader-dots {
+        position: relative;
+        width: 3rem;
+        height: 3rem;
+      }
+      .loader-dots div {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0.75rem;
+        height: 0.75rem;
+        background-color: #3b82f6;
+        border-radius: 50%;
+        animation: bounce 1.2s infinite ease-in-out;
+      }
+      .loader-dots div:nth-child(2) {
+        animation-delay: -0.4s;
+        left: auto;
+        right: 0;
+      }
+      .loader-dots div:nth-child(3) {
+        animation-delay: -0.2s;
+        top: auto;
+        bottom: 0;
+      }
+      .loader-dots div:nth-child(4) {
+        animation-delay: 0s;
+        top: auto;
+        bottom: 0;
+        left: auto;
+        right: 0;
+      }
+      @keyframes bounce {
+        0%, 80%, 100% {
+          transform: translateY(0);
+        }
+        40% {
+          transform: translateY(-1rem);
+        }
+      }
+      #error {
+        position: fixed;
+        inset: 0;
+        background-color: #fef0f0;
+        color: #b91c1c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+      }
+      #error div {
+        border: 1px solid #fecaca;
+        border-radius: 0.5rem;
+        padding: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        background-color: #fff;
+        max-width: 90%;
+        text-align: center;
+      }
+      #error h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #b91c1c;
+      }
+      #error p {
+        color: #6b7280;
+        margin-bottom: 1.5rem;
+      }
+      #error button {
+        margin-top: 1.5rem;
+        padding: 0.75rem 1.25rem;
+        background-color: #dc2626;
+        color: #fff;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+        width: 100%;
+        max-width: 20rem;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #error button:hover {
+        background-color: #b91c1c;
+      }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-start min-h-screen py-4">
+    <h1 class="text-2xl font-bold mb-4 text-blue-700 title-black text-center">Hiệu ứng chấm chấm từ Video</h1>
+    <p class="text-gray-600 mb-4 text-center">Chọn một video để tạo hiệu ứng chấm chấm:</p>
+
+    <div class="flex flex-col items-center gap-4 mb-4 w-full max-w-md px-4">
+        <input type="file" id="videoUpload" accept="video/*" class="hidden">
+        <label for="videoUpload" class="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-lg shadow-md transition duration-300 ease-in-out w-full text-center flex items-center justify-center gap-2">
+            <i class="material-icons">upload</i>
+            <span>Tải lên Video</span>
+        </label>
+
+        <div class="flex items-center justify-center gap-4 w-full">
+            <label for="dotSize" class="text-gray-700 font-medium">Kích thước chấm:</label>
+            <input type="number" id="dotSize" value="5" min="1" class="w-24 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-center">
+
+            <label for="fps" class="text-gray-700 font-medium">FPS:</label>
+            <input type="number" id="fps" value="30" min="1" max="60" class="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-center">
+        </div>
+    </div>
+
+    <div id="videoDisplayArea" class="w-full">
+        <video id="myVideo" controls class="hidden w-full"></video>
+        <canvas id="myCanvas" class="hidden w-full"></canvas>
+    </div>
+
+    <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="loader-dots">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+    </div>
+
+    <div id="error" class="hidden">
+        <div>
+            <h2 class="text-2xl font-semibold mb-4">Lỗi</h2>
+            <p id="errorMessageText" class="text-gray-700"></p>
+            <button id="errorClose">Đóng</button>
+        </div>
+    </div>
+
+    <script>
+    const videoUpload = document.getElementById('videoUpload');
+    const myVideo = document.getElementById('myVideo');
+    const myCanvas = document.getElementById('myCanvas');
+    const loadingScreen = document.getElementById('loading');
+    const errorScreen = document.getElementById('error');
+    const errorMessageText = document.getElementById('errorMessageText');
+    const errorCloseButton = document.getElementById('errorClose');
+
+    let isPlaying = false;
+    let animationFrameId;
+
+    function showError(message) {
+        errorMessageText.textContent = message;
+        errorScreen.classList.remove('hidden');
+        loadingScreen.classList.add('hidden');
+        myVideo.pause();
+        isPlaying = false;
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+    }
+
+    errorCloseButton.addEventListener('click', () => {
+        errorScreen.classList.add('hidden');
+    });
+
+    videoUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file.type.startsWith('video/')) {
+            showError("Loại tệp không hợp lệ. Vui lòng chọn một tệp video.");
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        myVideo.src = url;
+        myVideo.classList.remove('hidden');
+        myCanvas.classList.add('hidden');
+        isPlaying = false;
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+    });
+
+    myVideo.addEventListener('canplay', () => {
+        myVideo.play();
+    });
+
+    myVideo.addEventListener('play', () => {
+        loadingScreen.classList.remove('hidden');
+    });
+
+    myVideo.addEventListener('playing', () => {
+        setTimeout(() => {
+            myVideo.play();
+            startVideoProcessing();
+        }, 0);
+    });
+
+    myVideo.addEventListener('pause', () => {
+        isPlaying = false;
+        loadingScreen.classList.add('hidden');
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+    });
+
+    myVideo.addEventListener('ended', () => {
+        isPlaying = false;
+        loadingScreen.classList.add('hidden');
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+    });
+
+    myVideo.addEventListener('error', () => {
+        showError("Đã xảy ra lỗi khi tải video. Vui lòng thử lại.");
+    });
+
+    function startVideoProcessing() {
+        if (!isPlaying) {
+            isPlaying = true;
+            myVideo.play();
+        }
+        processVideo();
+    }
+
+    function processVideo() {
+        if (!isPlaying) return;
+
+        const dotSize = parseInt(document.getElementById('dotSize').value);
+        const fps = parseInt(document.getElementById('fps').value);
+
+        if (isNaN(dotSize) || dotSize <= 0) {
+            showError("Kích thước chấm không hợp lệ. Vui lòng nhập một số lớn hơn 0.");
+            return;
+        }
+        if (isNaN(fps) || fps <= 0 || fps > 60) {
+            showError("FPS không hợp lệ. Vui lòng nhập một số từ 1 đến 60.");
+            return;
+        }
+
+        myCanvas.width = myVideo.videoWidth;
+        myCanvas.height = myVideo.videoHeight;
+        const ctx = myCanvas.getContext('2d');
+        ctx.drawImage(myVideo, 0, 0, myCanvas.width, myCanvas.height);
+
+        const imageData = ctx.getImageData(0, 0, myCanvas.width, myCanvas.height);
+        const data = imageData.data;
+
+        ctx.clearRect(0, 0, myCanvas.width, myCanvas.height);
+        const numCols = Math.ceil(myCanvas.width / dotSize);
+        const numRows = Math.ceil(myCanvas.height / dotSize);
+
+        for (let y = 0; y < numRows; y++) {
+            for (let x = 0; x < numCols; x++) {
+                const pixelX = Math.floor(x * dotSize);
+                const pixelY = Math.floor(y * dotSize);
+                let totalRed = 0, totalGreen = 0, totalBlue = 0;
+                let count = 0;
+
+                for (let i = 0; i < dotSize; i++) {
+                    for (let j = 0; j < dotSize; j++) {
+                        const sampleX = pixelX + j;
+                        const sampleY = pixelY + i;
+                        if (sampleX < myCanvas.width && sampleY < myCanvas.height) {
+                            const pixelIndex = (sampleX + sampleY * myCanvas.width) * 4;
+                            totalRed += data[pixelIndex];
+                            totalGreen += data[pixelIndex + 1];
+                            totalBlue += data[pixelIndex + 2];
+                            count++;
+                        }
+                    }
+                }
+
+                if (count > 0) {
+                    const avgRed = Math.round(totalRed / count);
+                    const avgGreen = Math.round(totalGreen / count);
+                    const avgBlue = Math.round(totalBlue / count);
+                    ctx.fillStyle = `rgb(${avgRed},${avgGreen},${avgBlue})`;
+                    ctx.beginPath();
+                    ctx.arc(pixelX, pixelY, dotSize / 2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+        }
+
+        loadingScreen.classList.add('hidden');
+        myCanvas.classList.remove('hidden');
+
+        setTimeout(() => {
+            if (isPlaying) {
+                animationFrameId = requestAnimationFrame(processVideo);
+            }
+        }, 1000 / fps);
+    }
+    </script>
+</body>
+</html>
